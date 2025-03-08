@@ -1,7 +1,7 @@
 Flask==2.3.2
 flask-cors==3.0.10
 torch==2.0.1
-transformers==4.33.4
+transformers==4.40.0
 accelerate==0.20.3
 bitsandbytes==0.40.1
 mlx_lm==0.21.5 

@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>FitFocus Prototype</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <div id="loading-screen" class="loading hidden">
+    <div class="spinner"></div>
+    <p>Loading meal plan...</p>
+  </div>
+  
+  <!-- ========== Onboarding Screen ========== -->
+  <div id="onboarding-screen" class="screen active">
+    <h1>Welcome to FitFocus!</h1>
+    <!-- Inline SVG Motivational Image -->
+    <img 
+      src="./images/homeFF.png"
+      alt="Motivational Image"
+      class="hero-image"
+    />
+    <p>Let's set up your personalized fitness & nutrition plan.</p>
+    
+    <label for="userName">Name:</label>
+    <input type="text" id="userName" placeholder="Enter your name" />
+
+    <label for="userAge">Age:</label>
+    <input type="number" id="userAge" placeholder="Enter your age" />
+
+    <label for="userWeight">Weight (kg):</label>
+    <input type="number" id="userWeight" placeholder="Enter your weight in kg" />
+
+    <label for="userHeight">Height (cm):</label>
+    <input type="number" id="userHeight" placeholder="Enter your height in cm" />
+
+    <label for="gender">Gender:</label>
+    <select id="gender">
+      <option value="male">Male</option>
+      <option value="female">Female</option>
+    </select>
+
+    <label for="workoutsGoal">Weekly Workouts Goal:</label>
+    <input type="number" id="workoutsGoal" placeholder="e.g., 3" />
+
+    <label for="fitnessGoal">Fitness Goal:</label>
+    <select id="fitnessGoal">
+      <option value="gainMuscle">Gain Muscle</option>
+      <option value="loseWeight">Lose Weight</option>
+      <option value="maintainWeight">Maintain Weight</option>
+      <option value="upperBody">Upper Body Sculpting</option>
+      <option value="lowerBody">Lower Body Sculpting</option>
+      <option value="flexibility">Flexibility</option>
+      <option value="mobility">Mobility</option>
+    </select>
+
+    <label class="meal-plan-label">Meal Plan Option:</label>
+    <div class="meal-plan-option">
+      <input type="radio" name="mealPlanOption" id="mealPlanYes" value="yes" checked>
+      <label for="mealPlanYes" class="meal-plan-radio">Yes, I want a meal plan</label>
+      <input type="radio" name="mealPlanOption" id="mealPlanNo" value="no">
+      <label for="mealPlanNo" class="meal-plan-radio">No, I prefer to plan my own meals</label>
+    </div>
+
+    <button onclick="goToDashboard()" class="getStarted">Get Started</button>
+  </div>
+  <!-- ========== Dietary Details Screen ========== -->
+<div id="dietary-screen" class="screen">
+  <h1>Dietary Preferences</h1>
+  <p>Select your dietary restrictions:</p>
+  <div class="checkbox-group">
+    <label><input type="checkbox" name="dietary_restriction" value="vegan"> Vegan</label>
+    <label><input type="checkbox" name="dietary_restriction" value="vegetarian"> Vegetarian</label>
+    <label><input type="checkbox" name="dietary_restriction" value="lactose intolerant"> Lactose Intolerant</label>
+    <label><input type="checkbox" name="dietary_restriction" value="keto"> Keto</label>
+    <label><input type="checkbox" name="dietary_restriction" value="whole30"> Whole30</label>
+    <label><input type="checkbox" name="dietary_restriction" value="paleo"> Paleo</label>
+    <label><input type="checkbox" name="dietary_restriction" value="intermittent fasting"> Intermittent Fasting</label>
+    <label><input type="checkbox" name="dietary_restriction" value="one meal a day"> One Meal a Day</label>
+  </div>
+
+  <p>Select any allergies you have:</p>
+  <div class="checkbox-group">
+    <label><input type="checkbox" name="allergy" value="nuts"> Nuts</label>
+    <label><input type="checkbox" name="allergy" value="dairy"> Dairy</label>
+    <label><input type="checkbox" name="allergy" value="gluten"> Gluten</label>
+    <label><input type="checkbox" name="allergy" value="shellfish"> Shellfish</label>
+    <label><input type="checkbox" name="allergy" value="soy"> Soy</label>
+    <!-- add other common allergies as needed -->
+  </div>
+
+  <p>Select your favorite cuisines:</p>
+  <div class="checkbox-group">
+    <label><input type="checkbox" name="cuisine" value="italian"> Italian</label>
+    <label><input type="checkbox" name="cuisine" value="mexican"> Mexican</label>
+    <label><input type="checkbox" name="cuisine" value="indian"> Indian</label>
+    <label><input type="checkbox" name="cuisine" value="chinese"> Chinese</label>
+    <label><input type="checkbox" name="cuisine" value="japanese"> Japanese</label>
+    <!-- add more cuisines -->
+  </div>
+
+  <p>Select your favorite foods:</p>
+  <div class="checkbox-group">
+    <label><input type="checkbox" name="favorite_food" value="pizza"> Pizza</label>
+    <label><input type="checkbox" name="favorite_food" value="pasta"> Pasta</label>
+    <label><input type="checkbox" name="favorite_food" value="salad"> Salad</label>
+    <label><input type="checkbox" name="favorite_food" value="burger"> Burger</label>
+    <label><input type="checkbox" name="favorite_food" value="sushi"> Sushi</label>
+    <!-- add more favorite food options -->
+  </div>
+
+  <p>Select foods you absolutely don't want to eat:</p>
+  <div class="checkbox-group">
+    <label><input type="checkbox" name="avoid_food" value="beef"> Beef</label>
+    <label><input type="checkbox" name="avoid_food" value="pork"> Pork</label>
+    <label><input type="checkbox" name="avoid_food" value="seafood"> Seafood</label>
+    <!-- add other options as needed -->
+  </div>
+
+  <button onclick="submitDietaryDetails()">Submit Dietary Preferences</button>
+  <!-- <button onclick="goBackToDashboard()">Back to Dashboard</button> -->
+  
+</div>
+
+  <!-- ========== Dashboard Screen ========== -->
+  <div id="dashboard-screen" class="screen">
+    <h1>Dashboard</h1>
+    <p id="greeting"></p>
+    
+    <div class="progress">
+      <h2>Your Weekly Workout Progress</h2>
+      <p>Workouts Completed: <span id="workoutsCompleted">0</span> / <span id="weeklyGoal">0</span></p>
+      <button onclick="logWorkout()">Log a Workout</button>
+    </div>
+
+    <!-- Meal Plan Section (optional) -->
+    <div id="mealPlanSection" class="meal-plan">
+      <h2>Your Customized Meal Plan</h2>
+      <p id="mealPlanRecommendation"></p>
+      <button class="mealPlanButton" onclick="showMealPlan()">My Meal Plan</button>
+    </div>
+
+    <div class="quick-actions">
+      
+      <button onclick="showFindClass()">Find a Nearby Workout Class</button>
+      <button onclick="showAccountability()">Accountability Partners</button>
+    </div>
+
+    <button onclick="resetApp()" class="reset-btn">Reset / Start Over</button>
+  </div>
+
+  <!-- ========== Find Class Screen ========== -->
+  <div id="find-class-screen" class="screen">
+    <h1>Find a Nearby Workout Class</h1>
+    <p>Search by type, distance, or time:</p>
+    <select>
+      <option value="yoga">Yoga</option>
+      <option value="hiit">HIIT</option>
+      <option value="dance">Dance</option>
+      <option value="pilates">Pilates</option>
+    </select>
+    <button>Search</button>
+
+    <div class="class-results">
+      <p><strong>Featured Classes in Barcelona:</strong></p>
+      <ul>
+        <li>
+          <strong>Ignite Fitness</strong> – Bespoke personal training near Urquinoana metro station.
+          <br>
+          <a href="https://www.ignitefitness.es" target="_blank" class="book-button">Book Class</a>
+        </li>
+        <li>
+          <strong>Halo Fitness</strong> – Inclusive classes in Poblenou, popular among women and the LGBT community.
+          <br>
+          <a href="https://www.halofitness.es" target="_blank" class="book-button">Book Class</a>
+        </li>
+        <li>
+          <strong>Smartfit (Arc de Triomf)</strong> – Modern gym with separate zones for cardio and strength.
+          <br>
+          <a href="https://smartfit.es/arcdetriomf" target="_blank" class="book-button">Book Class</a>
+        </li>
+        <li>
+          <strong>Club Metropolitan</strong> – Upscale chain with multiple locations and premium classes.
+          <br>
+          <a href="https://www.clubmetropolitan.net/en/gimnasios/barcelona" target="_blank" class="book-button">Book Class</a>
+        </li>
+        <li>
+          <strong>Holmes Place Barcelona</strong> – International chain with top-tier amenities and classes.
+          <br>
+          <a href="https://www.holmesplace.com/gyms-barcelona" target="_blank" class="book-button">Book Class</a>
+        </li>
+      </ul>
+      <p><em>Can't make it to a class? Try a home workout!</em></p>
+      <!-- Embedded YouTube home workout video placeholder -->
+      <div class="home-workout">
+        <iframe width="100%" height="215" src="https://www.youtube.com/embed/IT94xC35u6k" title="Home Workout Video" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+        <p class="video-caption">Example: 20-Minute Fat Burning Full Body Workout</p>
+      </div>
+    </div>
+
+    <button onclick="goBackToDashboard()">Back to Dashboard</button>
+  </div>
+
+
+
+  <!-- ========== Accountability Screen ========== -->
+  <div id="accountability-screen" class="screen">
+    <h1>Accountability Partners</h1>
+    <p>Invite friends or check on your progress.</p>
+    <button>Invite Friends</button>
+
+    <h2>Partner Activity</h2>
+    <ul>
+      <li>Jane: 2 workouts this week</li>
+      <li>Mike: 1 workout this week</li>
+      <li>You: <span id="myWorkouts">0</span> workouts this week</li>
+    </ul>
+
+    <p id="slackingAlert" class="alert hidden">
+      <strong>Alert:</strong> Your partners have been notified you're slacking!
+    </p>
+
+    <button onclick="goBackToDashboard()">Back to Dashboard</button>
+  </div>
+
+    <!-- ========== Meal Plan Screen ========== -->
+  <div id="mealplan-screen" class="screen">
+    <h1>My Meal Plan</h1>
+    <div class="meal-plan" id="mealPlanContent">
+      <!-- Daily menu content will be inserted here -->
+    </div>
+    <button onclick="goBackToDashboard()">Back to Dashboard</button>
+  </div>
+
+
+  <!-- ========== Log Workout Popup ========== -->
+  <div id="log-workout-screen" class="popup hidden">
+    <div class="popup-content">
+      <h2>Log Workout</h2>
+      <label for="workoutType">Workout Type:</label>
+      <input type="text" id="workoutType" placeholder="e.g., Running, Yoga" />
+
+      <label for="workoutDuration">Duration (mins):</label>
+      <input type="number" id="workoutDuration" placeholder="30" />
+
+      <button onclick="saveWorkout()">Save Workout</button>
+      <button onclick="cancelLog()">Cancel</button>
+    </div>
+  </div>
+  <script src="script.js"></script>
+</body>
+</html>

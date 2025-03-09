@@ -3,6 +3,8 @@ from flask_cors import CORS
 from huggingface_hub import InferenceClient
 import os
 import gc
+import traceback
+
 
 app = Flask(__name__)
 CORS(app)
@@ -70,6 +72,7 @@ def generate_meal_plan_endpoint():
         meal_plan = generate_meal_plan_from_llm(data)
         return jsonify({"meal_plan": meal_plan})
     except Exception as e:
+        traceback.print_exc()
         return jsonify({"error": str(e)}), 500
 
 if __name__ == '__main__':

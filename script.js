@@ -40,7 +40,7 @@ function calculateCalorieNeeds(gender, weight, height, age, workoutsPerWeek, goa
 // ------------------------------
 async function generateMealPlanFromAPI(userDetails) {
   try {
-    const response = await fetch('http://127.0.0.1:5001/generate_meal_plan', {
+    const response = await fetch('https://fitfocus-qqev.onrender.com/generate_meal_plan', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(userDetails)

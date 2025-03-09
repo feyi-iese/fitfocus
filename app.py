@@ -1,23 +1,22 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-from mlx_lm import load, generate
-import mlx.core as mx
+from huggingface_hub import InferenceClient
 import os
-import torch
 import gc
 
 app = Flask(__name__)
 CORS(app)
 
-# Configure MLX for M3 optimization
-os.environ["MLX_ENABLE_LOW_PRECISION"] = "1"  # Enable Metal low-precision
-os.environ["MLX_GPU_MEMORY_LIMIT"] = "32768"  # 32GB for M3 Max
+# Set your Hugging Face API token as an environment variable (recommended)
+HF_API_TOKEN = os.environ.get("HUGGINGFACE_HUB_TOKEN")
 
-# Load model - update path to your model location
-model_path = "models/Mistral-7B-Instruct-v0.1-4bit-mlx"
-model, tokenizer = load(model_path)
+# Initialize the InferenceClient with your API token.
+client = InferenceClient(provider="hf-inference", api_key=HF_API_TOKEN)
 
 def build_prompt(details):
+    """
+    Builds the prompt string in the instruction format required by Mistral-7B-Instruct.
+    """
     return f"""<s>[INST] You are a professional nutritionist. Generate a one-day meal plan with these criteria. You must not exceed the calorie target:
 - {details['calorie_target']} kcal
 - Dietary: {', '.join(details['dietary_restrictions'])}
@@ -35,22 +34,24 @@ Dinner: [Food] | ~kcal
 Summary: [Explanation] [/INST]"""
 
 def generate_meal_plan_from_llm(details):
+    # Build the prompt from the input details
     prompt = build_prompt(details)
     print("Prompt:", prompt)
     
-    # Generate response using MLX generate function without sampling parameters
-    response = generate(
-        model=model,
-        tokenizer=tokenizer,
-        prompt=prompt,
-        max_tokens=512  # Use max_tokens instead of max_new_tokens if that's what MLX expects
+    # Wrap the prompt in a single message (chat format)
+    messages = [{"role": "user", "content": prompt}]
+    
+    # Call the HF Inference API using the chat endpoint
+    completion = client.chat.completions.create(
+        model="mistralai/Mistral-7B-Instruct-v0.1",
+        messages=messages,
+        max_tokens=512,
     )
     
-    # Split off the prompt if needed; here we assume the generated text comes after [/INST]
-    generated_text = response.split("[/INST]")[-1].strip()
+    # Extract the generated text from the response (strip extra whitespace)
+    generated_text = completion.choices[0].message.strip()
     
-    # Clean up to free memory
-    torch.cuda.empty_cache() if torch.cuda.is_available() else None
+    # Force garbage collection to free memory
     gc.collect()
     
     return generated_text
@@ -72,4 +73,4 @@ def generate_meal_plan_endpoint():
         return jsonify({"error": str(e)}), 500
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5001, debug=True)
+    app.run(host='0.0.0.0', port=5001, debug=False)

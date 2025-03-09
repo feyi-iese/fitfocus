@@ -5,3 +5,4 @@ meal-planner-venv/
 mlx-env/
 .DS_Store
 models/
+requirements-local.txt

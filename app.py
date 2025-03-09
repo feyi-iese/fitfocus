@@ -47,7 +47,7 @@ def generate_meal_plan_from_llm(details):
     completion = client.chat.completions.create(
         model="mistralai/Mistral-7B-Instruct-v0.2",
         messages=messages,
-        max_tokens=512,
+        max_tokens=500,
     )
     
     # Extract the generated text from the response (strip extra whitespace)

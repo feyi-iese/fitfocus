@@ -51,7 +51,10 @@ def generate_meal_plan_from_llm(details):
     )
     
     # Extract the generated text from the response (strip extra whitespace)
-    generated_text = completion.choices[0].message
+    generated_text = completion.choices[0].message.content  # Access the content property
+    if not isinstance(generated_text, str):
+        generated_text = str(generated_text)
+    return generated_text.strip()
     
     # Force garbage collection to free memory
     gc.collect()

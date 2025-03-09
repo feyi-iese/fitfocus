@@ -45,7 +45,7 @@ def generate_meal_plan_from_llm(details):
     
     # Call the HF Inference API using the chat endpoint
     completion = client.chat.completions.create(
-        model="mistralai/Mistral-7B-Instruct-v0.1",
+        model="mistralai/Mistral-7B-Instruct-v0.2",
         messages=messages,
         max_tokens=512,
     )

@@ -5,3 +5,4 @@ transformers==4.40.0
 accelerate==0.20.3
 bitsandbytes==0.40.1
 mlx_lm==0.21.5 
+gunicorn

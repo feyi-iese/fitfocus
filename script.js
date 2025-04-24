@@ -204,7 +204,9 @@ function renderMealPlan() {
   
       // Split into description (with calories) and the recipe instructions
       const [descPart, recipePart = ''] = raw.split(/Recipe:/i).map(s => s.trim());
-  
+      // Remove any stray asterisks from both parts
+      const cleanDesc   = descPart.replace(/\*+/g, '').trim();
+      const cleanRecipe = recipePart.replace(/\*+/g, '').trim();
       // Extract calories from the description part only
       const match = descPart.match(/(\d+)\s*(?:kcal|calories?)/i);
       const cals  = match ? parseInt(match[1], 10) : 0;

@@ -1,83 +1,79 @@
-from flask import Flask, request, jsonify
-from flask_cors import CORS
-from huggingface_hub import InferenceClient
+# app.py
+
 import os
-import gc
-import traceback
+from flask import Flask, request, jsonify, send_from_directory
+from flask_cors import CORS
+from dotenv import load_dotenv
 
+# Use the new OpenAI v1 client
+from openai import OpenAI  
 
-app = Flask(__name__)
+load_dotenv()
+
+# Initialize Flask
+app = Flask(__name__, static_folder='.', static_url_path='')
 CORS(app)
 
-# Set your Hugging Face API token as an environment variable (recommended)
-HF_API_TOKEN = os.environ.get("HUGGINGFACE_HUB_TOKEN")
-
-# Initialize the InferenceClient with your API token.
-client = InferenceClient(provider="hf-inference", api_key=HF_API_TOKEN)
-
-def build_prompt(details):
-    """
-    Builds the prompt string in the instruction format required by Mistral-7B-Instruct.
-    """
-    return f"""<s>[INST] You are a professional nutritionist. Generate a one-day meal plan with these criteria. You must not exceed the calorie target:
-- {details['calorie_target']} kcal
-- Dietary: {', '.join(details['dietary_restrictions'])}
-- Allergies: {', '.join(details['allergies'])}
-- Cuisines: {', '.join(details['favorite_cuisines'])}
-- Favorite foods: {', '.join(details['favorite_foods'])}
-- Avoid: {', '.join(details['avoid_foods'])}
-
-Format exactly:
-Breakfast: [Food] | ~kcal
-Snack 1: [Food] | ~kcal
-Lunch: [Food] | ~kcal
-Snack 2: [Food] | ~kcal
-Dinner: [Food] | ~kcal
-Summary: [Explanation] [/INST]"""
-
-def generate_meal_plan_from_llm(details):
-    # Build the prompt from the input details
-    prompt = build_prompt(details)
-    print("Prompt:", prompt)
-    
-    # Wrap the prompt in a single message (chat format)
-    messages = [{"role": "user", "content": prompt}]
-    
-    # Call the HF Inference API using the chat endpoint
-    completion = client.chat.completions.create(
-        model="mistralai/Mistral-7B-Instruct-v0.2",
-        messages=messages,
-        max_tokens=500
-    )
-    
-    # Extract the generated text from the response (strip extra whitespace)
-    generated_text = completion.choices[0].message.content  # Access the content property
-    if not isinstance(generated_text, str):
-        generated_text = str(generated_text)
-    return generated_text.strip()
-    
-    # Force garbage collection to free memory
-    gc.collect()
-    
-    return generated_text
+# Initialize OpenAI client
+client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
 
 @app.route('/generate_meal_plan', methods=['POST'])
-def generate_meal_plan_endpoint():
-    try:
-        data = request.get_json()
-        required_fields = [
-            'calorie_target', 'dietary_restrictions', 'allergies',
-            'favorite_cuisines', 'favorite_foods', 'avoid_foods'
-        ]
-        if not all(field in data for field in required_fields):
-            return jsonify({"error": "Missing required fields"}), 400
+def generate_meal_plan():
+    data = request.get_json() or {}
 
-        meal_plan = generate_meal_plan_from_llm(data)
+    # Extract inputs
+    calorie_target = data.get('calorie_target', 2000)
+    restrictions   = ', '.join(data.get('dietary_restrictions', [])) or 'none'
+    allergies      = ', '.join(data.get('allergies', [])) or 'none'
+    cuisines       = ', '.join(data.get('favorite_cuisines', [])) or 'any'
+    favorites      = ', '.join(data.get('favorite_foods', [])) or 'none'
+    avoid          = ', '.join(data.get('avoid_foods', [])) or 'none'
+
+    prompt = (
+        f"You are a professional nutritionist. Generate a one-day meal plan with these criteria:\n"
+        f"- Calorie target: {calorie_target} kcal/day\n"
+        f"- Dietary restrictions: {restrictions}\n"
+        f"- Allergies: {allergies}\n"
+        f"- Favorite cuisines: {cuisines}\n"
+        f"- Favorite foods: {favorites}\n"
+        f"- Foods to avoid: {avoid}\n\n"
+        "Format the output as follows:\n"
+        "Meal Plan:\n"
+        "Breakfast: [description + calories]\n"
+        "Recipe: [ingredients + instructions]\n"
+        "Morning Snack: …\n"
+        "Recipe: …\n"
+        "Lunch: …\n"
+        "Recipe: …\n"
+        "Afternoon Snack: …\n"
+        "Recipe: …\n"
+        "Dinner: …\n"
+        "Recipe: …\n\n"
+        "Summary: [how this meets the calorie target]\n\n"
+        "Output only the plan in this format."
+    )
+
+    try:
+        # NEW v1.0 call
+        resp = client.chat.completions.create(
+            model="gpt-4-turbo",
+            messages=[
+                {"role": "system",  "content": "You are a helpful meal-planning assistant."},
+                {"role": "user",    "content": prompt}
+            ],
+            max_tokens=1200,
+            temperature=0.7
+        )
+        meal_plan = resp.choices[0].message.content
         return jsonify({"meal_plan": meal_plan})
     except Exception as e:
-        traceback.print_exc()
         return jsonify({"error": str(e)}), 500
 
+# Serve static files (index.html, JS, CSS, images)
+@app.route('/', defaults={'path': 'index.html'})
+@app.route('/<path:path>')
+def serve_static(path):
+    return send_from_directory('.', path)
+
 if __name__ == '__main__':
-    port = int(os.environ.get("PORT", 5001))
-    app.run(host='0.0.0.0', port=port, debug=False)
+    app.run(debug=True, port=5000)

@@ -6,3 +6,5 @@ mlx-env/
 .DS_Store
 models/
 requirements-local.txt
+.env
+.venv/

@@ -1,293 +1,300 @@
-// Global state variables
-let workoutsCompleted = 0;
-let weeklyGoal = 0;        // target workouts per week from input
-let userName = "";
-let userWeight = 0;        // in kg
-let userFitnessGoal = "";  // "gainMuscle", "loseWeight", "maintainWeight", "upperBody", "lowerBody", "flexibility", "mobility"
-let mealPlanOptIn = true;  // true if user wants a meal plan
-let generatedMealPlan = ""; // Global variable to store the generated meal plan
+// ========== State ==========
+let userName = '', 
+    userEmail = '', 
+    dob = '', 
+    gender = '', 
+    weight = 0, 
+    weightUnit = 'kg';
+let heightCm = 0, 
+    heightFt = 0, 
+    heightIn = 0, 
+    heightUnit = 'ft';
+let workouts = '', 
+    fitnessGoal = '', 
+    mealOpt = '';
+let dietaryRestrictions = [], 
+    allergies = [], 
+    cuisines = [], 
+    favoriteFoods = [], 
+    avoidFoods = [];
+let generatedMealPlan = '';
 
-// ------------------------------
-// Calorie Calculation Functions (using Mifflin-St Jeor equation)
-// ------------------------------
-function calculateCalorieNeeds(gender, weight, height, age, workoutsPerWeek, goal) {
-  let bmr;
-  if (gender.toLowerCase() === "male") {
-    bmr = (10 * weight) + (6.25 * height) - (5 * age) + 5;
-  } else {
-    bmr = (10 * weight) + (6.25 * height) - (5 * age) - 161;
-  }
-  let activityFactor;
-  if (workoutsPerWeek === 0) activityFactor = 1.2;
-  else if (workoutsPerWeek <= 2) activityFactor = 1.375;
-  else if (workoutsPerWeek <= 4) activityFactor = 1.55;
-  else if (workoutsPerWeek <= 6) activityFactor = 1.725;
-  else activityFactor = 1.9;
-  let tdee = bmr * activityFactor;
-  let adjusted;
-  if (goal.toLowerCase() === "loseweight") {
-    adjusted = tdee - 400;
-  } else if (goal.toLowerCase() === "gainmuscle") {
-    adjusted = tdee + (gender.toLowerCase() === "male" ? 500 : 350);
-  } else {
-    adjusted = tdee;
-  }
-  return Math.round(adjusted);
+// ========== Navigation ==========
+function goToStep(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
 }
 
-// ------------------------------
-// LLM Integration via Fetch
-// ------------------------------
-async function generateMealPlanFromAPI(userDetails) {
-  try {
-    const response = await fetch('https://fitfocus-qqev.onrender.com/generate_meal_plan', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(userDetails)
+// ========== Onboarding Handlers ==========
+function handleBasicInfo() {
+  userName  = document.getElementById('userName').value.trim();
+  userEmail = document.getElementById('userEmail').value.trim();
+  const d = document.getElementById('birthDay').value,
+        m = document.getElementById('birthMonth').value,
+        y = document.getElementById('birthYear').value;
+  dob = `${y}-${m.padStart(2,'0')}-${d.padStart(2,'0')}`;
+  goToStep('step-2');
+}
+
+function selectOption(key, val, el) {
+  // 1) Update the correct variable
+  switch(key) {
+    case 'gender':
+      gender = val;
+      break;
+    case 'workouts':
+      workouts = val;
+      break;
+    case 'fitnessGoal':
+      fitnessGoal = val;
+      break;
+    case 'mealOpt':
+      mealOpt = val;
+      break;
+    // add other single‑select keys here if needed
+  }
+  // 2) Highlight selection
+  document.querySelectorAll('.option-card').forEach(c => c.classList.remove('selected'));
+  el.classList.add('selected');
+}
+
+function handleGender() { 
+  if (gender) goToStep('step-3'); 
+}
+
+function toggleUnit(u, btn) {
+  weightUnit = u;
+  document.querySelectorAll('.unit-btn').forEach(b => b.classList.remove('selected'));
+  btn.classList.add('selected');
+}
+
+function handleWeight() {
+  weight = Number(document.getElementById('weightInput').value);
+  goToStep('step-4');
+}
+
+function toggleHeightUnit(u, btn) {
+  heightUnit = u;
+  document.querySelectorAll('#step-4 .unit-btn').forEach(b => b.classList.remove('selected'));
+  btn.classList.add('selected');
+  document.getElementById('heightCmInput').classList.toggle('hidden', u !== 'cm');
+  document.getElementById('heightFtInput').classList.toggle('hidden', u !== 'ft');
+}
+
+function handleHeight() {
+  if (heightUnit === 'cm') {
+    heightCm = Number(document.getElementById('heightCm').value);
+  } else {
+    heightFt = Number(document.getElementById('heightFt').value);
+    heightIn = Number(document.getElementById('heightIn').value);
+  }
+  goToStep('step-5');
+}
+
+function handleWorkouts() { 
+  if (workouts) goToStep('step-6'); 
+}
+
+function handleFitnessGoal() { 
+  if (fitnessGoal) goToStep('step-7'); 
+}
+
+function handleMealOpt() {
+  if (mealOpt === 'yes') {
+    return goToStep('step-8');
+  }
+  // Skip dietary steps
+  initDashboard();
+  goToStep('dashboard-screen');
+}
+
+// ========== Checkbox Helpers ==========
+function toggleCheckbox(key, val, el) {
+  let arr;
+  switch(key) {
+    case 'dietaryRestrictions':
+      arr = dietaryRestrictions;
+      break;
+    case 'allergies':
+      arr = allergies;
+      break;
+    case 'cuisines':
+      arr = cuisines;
+      break;
+    case 'favoriteFoods':
+      arr = favoriteFoods;
+      break;
+    case 'avoidFoods':
+      arr = avoidFoods;
+      break;
+  }
+  const idx = arr.indexOf(val);
+  if (idx > -1) {
+    arr.splice(idx, 1);
+    el.classList.remove('selected');
+  } else {
+    arr.push(val);
+    el.classList.add('selected');
+  }
+}
+
+async function submitDietary() {
+    document.getElementById('loading-screen').classList.remove('hidden');
+  
+    const prefs = {
+      calorie_target: Math.round(calculateCalorieNeeds()),
+      dietary_restrictions: dietaryRestrictions,
+      allergies,
+      favorite_cuisines: cuisines,
+      favorite_foods: favoriteFoods,
+      avoid_foods: avoidFoods
+    };
+  
+    try {
+      const res  = await fetch('https://fitfocus-qqev.onrender.com/generate_meal_plan', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(prefs)
+      });
+      const data = await res.json();
+      console.log("API response:", data);
+
+      if (!res.ok || !data.meal_plan) {
+        console.error('API Error:', data.error);
+        alert("Error from server:\n" + (data.error || JSON.stringify(data)));
+        return;
+      }
+  
+      // only proceed if we have a meal_plan
+      generatedMealPlan = data.meal_plan;
+      goToStep('mealplan-screen');
+      renderMealPlan();
+  
+    } catch (err) {
+      console.error('Network error:', err);
+      alert('Network error: ' + err.message);
+    } finally {
+      document.getElementById('loading-screen').classList.add('hidden');
+    }
+  }
+  
+// ========== Meal‑Plan Rendering ==========
+function renderMealPlan() {
+    if (typeof generatedMealPlan !== 'string') {
+      console.error('No meal plan to render:', generatedMealPlan);
+      return;
+    }
+  
+    const text   = generatedMealPlan.trim();
+    const parsed = parseMealPlan(text);
+    let html      = '';
+    let totalCal  = 0;
+  
+    const displayOrder = [
+      "Breakfast:",
+      "Morning Snack:",
+      "Lunch:",
+      "Afternoon Snack:",
+      "Dinner:"
+    ];
+  
+    displayOrder.forEach(header => {
+      const raw = parsed[header];
+      if (!raw) return;
+  
+      // Split into description (with calories) and the recipe instructions
+      const [descPart, recipePart = ''] = raw.split(/Recipe:/i).map(s => s.trim());
+  
+      // Extract calories from the description part only
+      const match = descPart.match(/(\d+)\s?kcal/i);
+      const cals  = match ? parseInt(match[1], 10) : 0;
+      totalCal   += cals;
+  
+      html += `
+        <div class="meal-card">
+          <strong>${header.replace(":", "")}</strong>
+          <p class="meal-desc">${descPart}</p>
+          <span class="meal-cals">${cals} kcal</span>
+          <details class="meal-recipe">
+            <summary>Recipe</summary>
+            <p>${recipePart}</p>
+          </details>
+        </div>
+      `;
     });
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-    const data = await response.json();
-    return data.meal_plan;
-  } catch (error) {
-    console.error("Error fetching meal plan from API:", error);
-    return "<em>Error generating meal plan. Please try again.</em>";
+  
+    // Optionally show total calories
+    html += `<div class="meal-total"><strong>Total:</strong> ${totalCal} kcal</div>`;
+  
+    document.getElementById('mealPlanContent').innerHTML = html;
   }
-}
-
-// ------------------------------
-// Navigation & Data Submission Functions
-// ------------------------------
-function goToDashboard() {
-  try {
-    const gender = document.getElementById("gender") ? document.getElementById("gender").value : "male";
-    userName = document.getElementById("userName").value || "Friend";
-    const age = Number(document.getElementById("userAge").value);
-    userWeight = Number(document.getElementById("userWeight").value) || 0;
-    const height = Number(document.getElementById("userHeight").value) || 170;
-    weeklyGoal = Number(document.getElementById("workoutsGoal").value) || 0;
-    userFitnessGoal = document.getElementById("fitnessGoal").value;
-    const mealOption = document.querySelector('input[name="mealPlanOption"]:checked');
-    mealPlanOptIn = mealOption && mealOption.value === "yes";
-    
-    const dailyCalorieNeed = calculateCalorieNeeds(gender, userWeight, height, age, weeklyGoal, userFitnessGoal);
-    console.log("Daily Calorie Need:", dailyCalorieNeed);
-    console.log("User Info:", { userName, age, userWeight, weeklyGoal, userFitnessGoal, mealPlanOptIn });
-    
-    document.getElementById("greeting").innerText = `Hello, ${userName}! Let's work towards your goals. Your daily calorie target is ${dailyCalorieNeed} kcal.`;
-    document.getElementById("weeklyGoal").innerText = weeklyGoal;
-    updateWorkoutCount();
-    
-    if (mealPlanOptIn) {
-      document.getElementById("onboarding-screen").classList.remove("active");
-      document.getElementById("dietary-screen").classList.add("active");
-      document.getElementById("mealPlanSection").classList.add("active");
-    } else {
-      document.getElementById("onboarding-screen").classList.remove("active");
-      document.getElementById("dashboard-screen").classList.add("active");
-      document.getElementById("mealPlanSection").classList.remove("active");
-    }
-  } catch (error) {
-    console.error("Error in goToDashboard:", error);
-  }
-}
-
-function submitDietaryDetails() {
-  // Show the loading screen
-  document.getElementById("loading-screen").classList.remove("hidden");
-
-  let dietaryRestrictions = Array.from(document.querySelectorAll("input[name='dietary_restriction']:checked")).map(el => el.value);
-  let allergies = Array.from(document.querySelectorAll("input[name='allergy']:checked")).map(el => el.value);
-  let favoriteCuisines = Array.from(document.querySelectorAll("input[name='cuisine']:checked")).map(el => el.value);
-  let favoriteFoods = Array.from(document.querySelectorAll("input[name='favorite_food']:checked")).map(el => el.value);
-  let avoidFoods = Array.from(document.querySelectorAll("input[name='avoid_food']:checked")).map(el => el.value);
   
-  const dietaryPreferences = {
-    calorie_target: calculateCalorieNeeds(
-      document.getElementById("gender") ? document.getElementById("gender").value : "male",
-      Number(document.getElementById("userWeight").value) || 0,
-      Number(document.getElementById("userHeight").value) || 170,
-      Number(document.getElementById("userAge").value),
-      Number(document.getElementById("workoutsGoal").value) || 0,
-      document.getElementById("fitnessGoal").value
-    ),
-    dietary_restrictions: dietaryRestrictions,
-    allergies: allergies,
-    favorite_cuisines: favoriteCuisines,
-    favorite_foods: favoriteFoods,
-    avoid_foods: avoidFoods
-  };
-  console.log("Dietary Preferences:", dietaryPreferences);
+function parseMealPlan(text) {
+    const sections = [
+      "Breakfast:",
+      "Morning Snack:",
+      "Lunch:",
+      "Afternoon Snack:",
+      "Dinner:",
+      "Summary:"
+    ];
   
-  generateMealPlanFromAPI(dietaryPreferences).then(rawMealPlan => {
-    generatedMealPlan = rawMealPlan;
-    localStorage.setItem("generatedMealPlan", rawMealPlan);
-    // Style the raw meal plan by parsing it and wrapping sections in HTML.
-    const styledPlan = styleMealPlan(rawMealPlan);
-    document.getElementById("mealPlanContent").innerHTML = styledPlan;
-
-    // Hide the loading screen once the API call is complete
-    document.getElementById("loading-screen").classList.add("hidden");
-    // Navigate to the meal plan screen
-    document.getElementById("dietary-screen").classList.remove("active");
-    document.getElementById("mealplan-screen").classList.add("active");
-  }).catch(error => {
-    console.error("Error fetching meal plan from API:", error);
-    // Hide the loading screen if there's an error
-    document.getElementById("loading-screen").classList.add("hidden");
-  });
-}
-
-// ------------------------------
-// Helper Functions to Style and Parse Meal Plan Output
-// ------------------------------
-function parseMealPlan(rawText) {
-  // Define the sections you expect
-  const sections = ["Breakfast:", "Snack 1:", "Lunch:", "Snack 2:", "Dinner:", "Summary:"];
-  // Create a regex pattern to capture any of those headers
-  const pattern = new RegExp(`(${sections.join("|")})`, "gi");
-  
-  // Split the text by the section headers, keeping the headers in the array
-  let parts = rawText.split(pattern).filter(part => part.trim() !== "");
-  
-  let mealPlan = {};
-  for (let i = 0; i < parts.length; i += 2) {
-    let header = parts[i].trim();
-    let content = parts[i + 1] ? parts[i + 1].trim() : "";
-    mealPlan[header] = content;
-  }
-  return mealPlan;
-}
-
-function styleMealPlan(rawText) {
-  const parsedPlan = parseMealPlan(rawText);  // your existing parse function
-  let styledHTML = "";
-
-  let totalCalories = 0;
-  let summaryContent = "";
-
-  // The order in which we want to display the sections
-  const preferredOrder = ["Breakfast:", "Snack 1:", "Lunch:", "Snack 2:", "Dinner:", "Summary:"];
-
-  preferredOrder.forEach(header => {
-    if (parsedPlan[header]) {
-      let content = parsedPlan[header];
-      
-      // Only parse and sum calories if NOT the summary section
-      if (header.toLowerCase() !== "summary:") {
-        // Use regex to find occurrences like "123 kcal"
-        const calorieMatches = content.match(/(\d+)\s*kcal/g);
-        if (calorieMatches) {
-          calorieMatches.forEach(match => {
-            // Extract digits and convert to integer
-            const kcalValue = parseInt(match.replace(/[^\d]/g, ""), 10);
-            totalCalories += kcalValue;
-          });
-        }
-        console.log(totalCalories)
+    const result = {};
+    sections.forEach((sec, i) => {
+      const start = text.indexOf(sec);
+      if (start !== -1) {
+        // find where the next section begins (or end of text)
+        const nextStarts = sections
+          .slice(i + 1)
+          .map(s => text.indexOf(s, start + sec.length))
+          .filter(idx => idx !== -1);
+        const end = nextStarts.length ? Math.min(...nextStarts) : text.length;
+        // slice out the content, trimming whitespace
+        const body = text.slice(start + sec.length, end).trim();
+        result[sec] = body;
       }
-
-      if (header.toLowerCase() === "summary:") {
-        // We'll append summary at the end
-        summaryContent = `<div class="meal-summary"><strong>${header}</strong> ${content}</div>`;
-      } else {
-        styledHTML += `<div class="meal-line"><strong>${header}</strong> ${content}</div>`;
-      }
-    }
-  });
-
-  // Append the summary section after everything else
-  if (summaryContent) {
-    styledHTML += summaryContent;
+    });
+  
+    return result;
   }
-
-  // Finally, append our computed total
-  styledHTML += `<div class="meal-total"><strong>Calculated Total:</strong> ${totalCalories} kcal</div>`;
-
-  return styledHTML;
+  
+// ========== Calorie Needs ==========
+function calculateCalorieNeeds() {
+  // Replace with your Mifflin‑St Jeor implementation
+  return 2000;
 }
 
-
-// ------------------------------
-// Other Utility Functions
-// ------------------------------
-function updateWorkoutCount() {
-  document.getElementById("workoutsCompleted").innerText = workoutsCompleted;
-}
-
-function showMealPlan() {
-  document.getElementById("dashboard-screen").classList.remove("active");
-  document.getElementById("mealplan-screen").classList.add("active");
-  if (generatedMealPlan) {
-    document.getElementById("mealPlanContent").innerHTML = styleMealPlan(generatedMealPlan);
-  } else {
-    const savedPlan = localStorage.getItem("generatedMealPlan");
-    if (savedPlan) {
-      document.getElementById("mealPlanContent").innerHTML = styleMealPlan(savedPlan);
-    } else {
-      document.getElementById("mealPlanContent").innerHTML = "<em>No meal plan generated yet. Please submit your dietary preferences first.</em>";
-    }
-  }
-}
-
-function refreshMealPlan() {
-  updateMealPlan();
-}
-
-function showFindClass() {
-  document.getElementById("dashboard-screen").classList.remove("active");
-  document.getElementById("find-class-screen").classList.add("active");
-}
-
-function showAccountability() {
-  document.getElementById("dashboard-screen").classList.remove("active");
-  document.getElementById("accountability-screen").classList.add("active");
-  document.getElementById("myWorkouts").innerText = workoutsCompleted;
-  if (workoutsCompleted < 1) {
-    document.getElementById("slackingAlert").classList.remove("hidden");
-  } else {
-    document.getElementById("slackingAlert").classList.add("hidden");
-  }
+// ========== Dashboard & Workouts ==========
+function initDashboard() {
+  document.getElementById('greeting').innerText = `Hello, ${userName}! Let's go.`;
+  // initialize other dashboard elements here
 }
 
 function logWorkout() {
-  document.getElementById("log-workout-screen").classList.remove("hidden");
+  document.getElementById('log-workout-screen').classList.remove('hidden');
 }
 
 function saveWorkout() {
-  const workoutType = document.getElementById("workoutType").value;
-  const workoutDuration = document.getElementById("workoutDuration").value;
-  workoutsCompleted++;
-  updateWorkoutCount();
-  updateMealPlan();
-  document.getElementById("log-workout-screen").classList.add("hidden");
-  document.getElementById("workoutType").value = "";
-  document.getElementById("workoutDuration").value = "";
+  // increment & update UI
+  document.getElementById('log-workout-screen').classList.add('hidden');
 }
 
 function cancelLog() {
-  document.getElementById("log-workout-screen").classList.add("hidden");
-}
-
-function goBackToDashboard() {
-  document.getElementById("find-class-screen").classList.remove("active");
-  document.getElementById("accountability-screen").classList.remove("active");
-  document.getElementById("mealplan-screen").classList.remove("active");
-  document.getElementById("dashboard-screen").classList.add("active");
+  document.getElementById('log-workout-screen').classList.add('hidden');
 }
 
 function resetApp() {
-  workoutsCompleted = 0;
-  userName = "";
-  userWeight = 0;
-  userFitnessGoal = "";
-  weeklyGoal = 0;
-  mealPlanOptIn = true;
-  document.getElementById("workoutsCompleted").innerText = "0";
-  document.getElementById("greeting").innerText = "";
-  document.getElementById("slackingAlert").classList.add("hidden");
-  
-  document.getElementById("dashboard-screen").classList.remove("active");
-  document.getElementById("onboarding-screen").classList.add("active");
+  window.location.reload();
 }
+
+// ========== On‑load Setup ==========
+window.addEventListener('DOMContentLoaded', () => {
+  const d = document.getElementById('birthDay'),
+        m = document.getElementById('birthMonth'),
+        y = document.getElementById('birthYear'),
+        months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  for (let i = 1; i <= 31; i++) d.innerHTML += `<option>${i}</option>`;
+  months.forEach((mo,i) => m.innerHTML += `<option value="${i+1}">${mo}</option>`);
+  const cy = new Date().getFullYear();
+  for (let i = 0; i < 80; i++) y.innerHTML += `<option>${cy - i}</option>`;
+});

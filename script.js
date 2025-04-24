@@ -206,7 +206,7 @@ function renderMealPlan() {
       const [descPart, recipePart = ''] = raw.split(/Recipe:/i).map(s => s.trim());
   
       // Extract calories from the description part only
-      const match = descPart.match(/(\d+)\s?kcal/i);
+      const match = descPart.match(/(\d+)\s*(?:kcal|calories?)/i);
       const cals  = match ? parseInt(match[1], 10) : 0;
       totalCal   += cals;
   

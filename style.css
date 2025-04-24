@@ -112,3 +112,6 @@ input, select {
 
 /* === Dashboard & Popups etc === */
 /* (Keep your existing styles or adapt as above) */
+span.meal-cals {
+  display: none;
+}

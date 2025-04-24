@@ -226,7 +226,7 @@ function renderMealPlan() {
     });
   
     // Optionally show total calories
-    html += `<div class="meal-total"><strong>Total:</strong> ${totalCal} kcal</div>`;
+    html += `<div class="meal-total"><strong>Total:</strong> ${totalCal} calories</div>`;
   
     document.getElementById('mealPlanContent').innerHTML = html;
   }
@@ -262,9 +262,45 @@ function parseMealPlan(text) {
   
 // ========== Calorie Needs ==========
 function calculateCalorieNeeds() {
-  // Replace with your Mifflin‑St Jeor implementation
-  return 2000;
+  // 1) Compute age from dob (YYYY-MM-DD)
+  const [y, m, d] = dob.split('-').map(Number);
+  const birth = new Date(y, m-1, d);
+  const age   = Math.floor((Date.now() - birth) / (365.25*24*60*60*1000));
+
+  // 2) Weight in kg
+  const weightKg = weightUnit === 'lbs'
+    ? weight * 0.453592
+    : weight;
+
+  // 3) Height in cm
+  const heightCmTotal = heightUnit === 'ft'
+    ? (heightFt * 30.48 + heightIn * 2.54)
+    : heightCm;
+
+  // 4) BMR via Mifflin–St Jeor
+  let bmr;
+  if (gender === 'male') {
+    bmr = 10 * weightKg + 6.25 * heightCmTotal - 5 * age + 5;
+  } else {
+    bmr = 10 * weightKg + 6.25 * heightCmTotal - 5 * age - 161;
+  }
+
+  // 5) Activity factor based on workouts/week
+  let activityFactor = 1.2;
+  if (workouts === '1-3') activityFactor = 1.375;
+  else if (workouts === '4-6') activityFactor = 1.55;
+  else if (workouts === '7+') activityFactor = 1.725;
+
+  let tdee = bmr * activityFactor;
+
+  // 6) Adjust for fitness goal
+  if (fitnessGoal === 'loseWeight')      tdee -= 400;
+  else if (fitnessGoal === 'gainMuscle') tdee += (gender === 'male' ? 500 : 350);
+  // maintainWeight and others just keep TDEE
+
+  return Math.round(tdee);
 }
+
 
 // ========== Dashboard & Workouts ==========
 function initDashboard() {
